@@ -15,6 +15,10 @@ export class InventoryPage extends BasePage {
       .filter({ hasText: productName })
       .getByRole('button', { name: 'Add to cart' });
 
+  readonly sortSelect = () => this.page.locator('[data-test="product-sort-container"]');
+  readonly inventoryItemName = () => this.page.locator('.inventory_item_name');
+  readonly inventoryItemPrice = () => this.page.locator('.inventory_item_price');
+
   async logout() {
     await this.menuButton().click();
     await this.logoutLink().click();
@@ -26,5 +30,19 @@ export class InventoryPage extends BasePage {
 
   async goToCart() {
     await this.cartLink().click();
+  }
+
+  async sortProducts(option: 'az' | 'za' | 'lohi' | 'hilo') {
+    await this.sortSelect().selectOption(option);
+    await this.waitForAjax();
+  }
+
+  async getProductNames(): Promise<string[]> {
+    return await this.inventoryItemName().allTextContents();
+  }
+
+  async getProductPrices(): Promise<number[]> {
+    const prices = await this.inventoryItemPrice().allTextContents();
+    return prices.map(p => parseFloat(p.replace('$', '')));
   }
 }
