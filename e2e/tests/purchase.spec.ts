@@ -49,4 +49,38 @@ test.describe('商品購入シナリオ', () => {
     await expect(checkoutPage.headerTitle()).toHaveText('Checkout: Complete!');
     await expect(checkoutPage.completeHeader()).toHaveText(SUCCESS_MESSAGES.CHECKOUT_COMPLETE);
   });
+
+  test('シナリオ 5: 3つの商品を購入し合計金額を確認する', async ({ page }) => {
+    const products = [
+      'Sauce Labs Backpack',
+      'Sauce Labs Bike Light',
+      'Sauce Labs Bolt T-Shirt'
+    ];
+
+    // 3つの商品をカートに追加
+    for (const product of products) {
+      await inventoryPage.addProductToCart(product);
+    }
+    await inventoryPage.goToCart();
+    
+    // カートページ
+    await expect(page).toHaveURL(cartPage.url);
+    await cartPage.proceedToCheckout();
+    
+    // チェックアウト情報入力
+    await checkoutPage.fillInformation('John', 'Doe', '123-4567');
+    
+    // チェックアウト確認画面で合計金額を確認
+    await expect(page).toHaveURL(checkoutPage.urlStepTwo);
+    const totalPrice = await checkoutPage.getTotalPrice();
+    
+    // 合計金額が0より大きいことを確認
+    expect(totalPrice).toBeGreaterThan(0);
+    
+    // 注文完了
+    await checkoutPage.finishCheckout();
+    await expect(page).toHaveURL(checkoutPage.urlComplete);
+    await expect(checkoutPage.headerTitle()).toHaveText('Checkout: Complete!');
+    await expect(checkoutPage.completeHeader()).toHaveText(SUCCESS_MESSAGES.CHECKOUT_COMPLETE);
+  });
 });

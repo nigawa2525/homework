@@ -13,6 +13,8 @@ export default {
     screenshot: 'on',
     video: 'on',
     trace: 'on',
+    // アクションごとのスナップショットを確実に記録
+    actionTimeout: 10000,
   },
   reporter: [['html'], ['list']],
 };
