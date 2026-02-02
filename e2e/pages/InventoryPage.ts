@@ -9,7 +9,7 @@ export class InventoryPage extends BasePage {
   readonly logoutLink = () => this.page.getByRole('link', { name: 'Logout' });
   readonly cartLink = () => this.page.locator('.shopping_cart_link');
   
-  // 商品追加ボタン（テキストベースで特定）
+  // 商品追加ボタン（商品名でフィルタリング）
   readonly addToCartButton = (productName: string) => 
     this.page.locator('.inventory_item')
       .filter({ hasText: productName })

@@ -6,7 +6,7 @@ import { CheckoutPage } from '../pages/CheckoutPage';
 import { Env } from '../helpers/Env';
 import { SUCCESS_MESSAGES } from '../constants/Messages';
 
-test.describe('Purchase Scenario', () => {
+test.describe('商品購入シナリオ', () => {
   let loginPage: LoginPage;
   let inventoryPage: InventoryPage;
   let cartPage: CartPage;
@@ -18,33 +18,33 @@ test.describe('Purchase Scenario', () => {
     cartPage = new CartPage(page);
     checkoutPage = new CheckoutPage(page);
     
-    // ログイン済みの状態で商品一覧ページから開始
+    // 準備: ログイン済みの状態で商品一覧ページから開始
     await loginPage.load(loginPage.url);
     await loginPage.login(Env.STANDARD_USER, Env.PASSWORD);
   });
 
-  test('Scenario 2: Purchase Product', async ({ page }) => {
-    // Add product to cart
+  test('シナリオ 2: 商品購入フロー', async ({ page }) => {
+    // 商品をカートに追加
     const productName = 'Sauce Labs Backpack';
     await inventoryPage.addProductToCart(productName);
     await inventoryPage.goToCart();
     
-    // Cart page
+    // カートページ
     await expect(page).toHaveURL(cartPage.url);
     await expect(cartPage.headerTitle()).toHaveText('Your Cart');
     await cartPage.proceedToCheckout();
     
-    // Checkout step one
+    // チェックアウト情報入力
     await expect(page).toHaveURL(checkoutPage.urlStepOne);
     await expect(checkoutPage.headerTitle()).toHaveText('Checkout: Your Information');
     await checkoutPage.fillInformation('John', 'Doe', '123-4567');
     
-    // Checkout step two
+    // チェックアウト確認
     await expect(page).toHaveURL(checkoutPage.urlStepTwo);
     await expect(checkoutPage.headerTitle()).toHaveText('Checkout: Overview');
     await checkoutPage.finishCheckout();
     
-    // Checkout complete
+    // チェックアウト完了
     await expect(page).toHaveURL(checkoutPage.urlComplete);
     await expect(checkoutPage.headerTitle()).toHaveText('Checkout: Complete!');
     await expect(checkoutPage.completeHeader()).toHaveText(SUCCESS_MESSAGES.CHECKOUT_COMPLETE);

@@ -3,7 +3,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { InventoryPage } from '../pages/InventoryPage';
 import { Env } from '../helpers/Env';
 
-test.describe('Inventory Sorting Scenarios', () => {
+test.describe('商品並び替えシナリオ', () => {
   let loginPage: LoginPage;
   let inventoryPage: InventoryPage;
 
@@ -16,7 +16,7 @@ test.describe('Inventory Sorting Scenarios', () => {
     await loginPage.login(Env.STANDARD_USER, Env.PASSWORD);
   });
 
-  test('Sort products by name (A to Z and Z to A)', async () => {
+  test('商品名での並び替え (昇順・降順)', async () => {
     // 名前の昇順 (A to Z)
     await inventoryPage.sortProducts('az');
     const namesAZ = await inventoryPage.getProductNames();
@@ -30,7 +30,7 @@ test.describe('Inventory Sorting Scenarios', () => {
     expect(namesZA).toEqual(sortedZA);
   });
 
-  test('Sort products by price (low to high and high to low)', async () => {
+  test('価格での並び替え (安い順・高い順)', async () => {
     // 金額の昇順 (low to high)
     await inventoryPage.sortProducts('lohi');
     const pricesLOHI = await inventoryPage.getProductPrices();

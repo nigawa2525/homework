@@ -3,7 +3,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { InventoryPage } from '../pages/InventoryPage';
 import { Env } from '../helpers/Env';
 
-test.describe('Logout Scenario', () => {
+test.describe('ログアウトシナリオ', () => {
   let loginPage: LoginPage;
   let inventoryPage: InventoryPage;
 
@@ -11,16 +11,16 @@ test.describe('Logout Scenario', () => {
     loginPage = new LoginPage(page);
     inventoryPage = new InventoryPage(page);
     
-    // ログイン済みの状態で商品一覧ページから開始
+    // 準備: ログイン済みの状態で商品一覧ページから開始
     await loginPage.load(loginPage.url);
     await loginPage.login(Env.STANDARD_USER, Env.PASSWORD);
   });
 
-  test('Scenario 3: Logout', async ({ page }) => {
-    // Logout
+  test('シナリオ 3: ログアウト', async ({ page }) => {
+    // ログアウト実行
     await inventoryPage.logout();
     
-    // Verify redirection to login page
+    // ログインページへのリダイレクトを確認
     await expect(page).toHaveURL(loginPage.url);
     await expect(loginPage.loginButton()).toBeVisible();
   });

@@ -3,7 +3,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { InventoryPage } from '../pages/InventoryPage';
 import { Env } from '../helpers/Env';
 
-test.describe('Login Scenario', () => {
+test.describe('ログインシナリオ', () => {
   let loginPage: LoginPage;
   let inventoryPage: InventoryPage;
 
@@ -11,11 +11,11 @@ test.describe('Login Scenario', () => {
     loginPage = new LoginPage(page);
     inventoryPage = new InventoryPage(page);
     
-    // ログインページから開始
+    // 準備: ログインページから開始
     await loginPage.load(loginPage.url);
   });
 
-  test('Scenario 1: Login', async ({ page }) => {
+  test('シナリオ 1: ログイン', async ({ page }) => {
     await loginPage.login(Env.STANDARD_USER, Env.PASSWORD);
     await expect(page).toHaveURL(inventoryPage.url);
     await expect(inventoryPage.headerTitle()).toHaveText('Products');
