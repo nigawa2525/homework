@@ -1,0 +1,45 @@
+---
+alwaysApply: true
+---
+
+# Playwright 実装・構造ルール
+
+## 1. フォルダ構成
+テストコードは `/e2e` 配下に集約し、以下の役割分担を厳守してください。
+- `/e2e/api/*.ts`      : データ準備用 API クラス (UI操作禁止)
+- `/e2e/constants/*.ts`: 共通定数 (エラーメッセージ, タイムアウト値など)
+- `/e2e/helpers/*.ts`  : 共通ユーティリティ (Env, DateUtilsなど)
+- `/e2e/pages/*.ts`    : Page Object Model (画面操作ロジック)
+- `/e2e/tests/*.spec.ts`: テストシナリオ
+
+## 2. 実装の原則 (Page Object Model)
+- **BasePageの継承**: すべての Page Object は `BasePage` を継承してください。
+- **URL定義**: `readonly url = \`${Env.BASE_URL}/path\`;` の形式で定義してください。
+- **Locator定義 (重要)**: 
+    - 要素は `readonly emailInput = () => this.page.getByRole(...)` のように**アロー関数**で定義してください。
+    - これにより、アクション実行のたびに最新のDOMから要素を再取得し、Staleエラーを防ぎます。
+- **画面遷移**: `await this.load(this.url)` を使用してください（BasePageの機能でローディング待機を自動化するため）。
+- **検証 (Assertion)**: Page Object 内に `expect` は記述せず、必ずテストファイル (.spec.ts) 側で記述してください。
+- **命名規則**: 原則として URL パスに基づき、パスの階層をディレクトリ構造に反映させること。
+  - 例: 
+    - `/inventory.html` -> `e2e/pages/InventoryPage.ts`
+    - `/cart.html` -> `e2e/pages/CartPage.ts`
+
+## 3. 変数・定数の管理
+- **環境変数**: `process.env` を直接使用せず、必ず `/e2e/helpers/Env.ts` を経由してください。
+- **共通定数**: エラーメッセージや固定値は `/e2e/constants/` 配下に定義してください。
+
+## 4. テストケース構成 (3段構成)
+1. **準備 (Setup)**: `test.beforeEach` 内で **APIクラス** を使用してデータを準備する（UI操作禁止）。
+2. **操作 (Scenario)**: Page Object のメソッドを呼び出す。
+3. **検証 (Assertion)**: `expect` を使用して結果を確認する。
+
+## 5. セレクター選定方針
+- **data-testid は使用禁止**。以下の優先順位で取得してください。
+    1. `getByRole`, `getByLabel`, `getByPlaceholder` (アクセシビリティ属性)
+    2. `getByText` (固定文言)
+
+## 6. MCP解析・コード生成フロー
+認証が必要なページの解析時：
+1. **手動ログイン待機**: ブラウザ起動後、ユーザーに手動ログインを求め、完了の合図を待機してください。
+2. **解析実行**: 合図後にページ解析を行い、Page Object を生成してください。
