@@ -57,13 +57,19 @@
   2. メニュー内の「Logout」をクリックする。
 - **期待結果**: ログインページに遷移すること。
 
-## 2. 技術スタック
+### テストケース 4: 商品の並び替え
+- **前提条件**: ログイン済みであること。
+- **手順**:
+  1. 商品一覧ページのソートプルダウンから「Name (A to Z)」、「Name (Z to A)」、「Price (low to high)」、「Price (high to low)」を順に選択する。
+- **期待結果**: それぞれの選択に合わせて、商品名または価格が昇順・降順に正しく並び替えられること。
+
+## 4. 技術スタック
 - **言語**: TypeScript
 - **テストフレームワーク**: Playwright
 - **デザインパターン**: Page Object Model (POM)
 - **CI/CD**: GitHub Actions
 
-## 3. セットアップと実行方法
+## 5. セットアップと実行方法
 
 ### ローカル実行
 ```bash
@@ -77,7 +83,7 @@ npx playwright install chromium
 npx playwright test
 ```
 
-## 5. CI Pipeline (GitHub Actions)
+## 6. CI Pipeline (GitHub Actions)
 
 GitHub Actions により、プルリクエストおよびメインブランチへのプッシュ時に自動的にテストが実行されます。
 
