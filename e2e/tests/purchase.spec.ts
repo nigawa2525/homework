@@ -6,7 +6,7 @@ import { CheckoutPage } from '../pages/CheckoutPage';
 import { Env } from '../helpers/Env';
 import { SUCCESS_MESSAGES } from '../constants/Messages';
 
-test.describe('Swag Labs E2E Scenarios', () => {
+test.describe('Purchase Scenario', () => {
   let loginPage: LoginPage;
   let inventoryPage: InventoryPage;
   let cartPage: CartPage;
@@ -18,19 +18,12 @@ test.describe('Swag Labs E2E Scenarios', () => {
     cartPage = new CartPage(page);
     checkoutPage = new CheckoutPage(page);
     
+    // ログイン済みの状態で商品一覧ページから開始
     await loginPage.load(loginPage.url);
-  });
-
-  test('Scenario 1: Login', async ({ page }) => {
     await loginPage.login(Env.STANDARD_USER, Env.PASSWORD);
-    await expect(page).toHaveURL(inventoryPage.url);
-    await expect(inventoryPage.headerTitle()).toHaveText('Products');
   });
 
   test('Scenario 2: Purchase Product', async ({ page }) => {
-    // Login
-    await loginPage.login(Env.STANDARD_USER, Env.PASSWORD);
-    
     // Add product to cart
     const productName = 'Sauce Labs Backpack';
     await inventoryPage.addProductToCart(productName);
@@ -55,17 +48,5 @@ test.describe('Swag Labs E2E Scenarios', () => {
     await expect(page).toHaveURL(checkoutPage.urlComplete);
     await expect(checkoutPage.headerTitle()).toHaveText('Checkout: Complete!');
     await expect(checkoutPage.completeHeader()).toHaveText(SUCCESS_MESSAGES.CHECKOUT_COMPLETE);
-  });
-
-  test('Scenario 3: Logout', async ({ page }) => {
-    // Login
-    await loginPage.login(Env.STANDARD_USER, Env.PASSWORD);
-    
-    // Logout
-    await inventoryPage.logout();
-    
-    // Verify redirection to login page
-    await expect(page).toHaveURL(loginPage.url);
-    await expect(loginPage.loginButton()).toBeVisible();
   });
 });
