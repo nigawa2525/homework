@@ -27,6 +27,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # --- 0) 開始通知（start notification）— テストを待たず即時に投げる ---
+  notify-start:
+    name: Notify Slack (start)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post start to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL 未設定のため開始通知をスキップします。"
+            exit 0
+          fi
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d @- <<EOF
+          {
+            "blocks": [
+              { "type": "header", "text": { "type": "plain_text", "text": ":rocket: E2E Playwright — 実行開始 / Started" } },
+              { "type": "section", "fields": [
+                { "type": "mrkdwn", "text": "*リポジトリ / Repo:*\n${REPO}" },
+                { "type": "mrkdwn", "text": "*トリガー / Trigger:*\n${TRIGGER}" }
+              ]},
+              { "type": "section", "text": { "type": "mrkdwn", "text": "<${RUN_URL}|実行ログ / Run logs>" } }
+            ]
+          }
+          EOF
+
   # --- 1) E2E 実行（このジョブの成否が workflow_run の conclusion になる） ---
   e2e:
     name: Run Playwright (Dev)
