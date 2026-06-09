@@ -101,7 +101,7 @@ flowchart TB
     OUT --> PAGES["GitHub Pages レポート"]
     OUT --> SLK1["Slack 結果通知"]
     OUT -->|"workflow_run: completed"| ASSESS["assess: 失敗/Flaky 判定"]
-    ASSESS -->|"対応あり"| HEAL["heal: Claude トリアゲ"]
+    ASSESS -->|"対応あり"| HEAL["heal: Claude トリアージ"]
     HEAL --> FLAKY["Flaky → 安定化 PR"]
     HEAL --> DEFECT["テスト不備 → draft PR"]
     HEAL --> REG["製品回帰/不明 → 変更なし・要人間"]

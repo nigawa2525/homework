@@ -13,7 +13,7 @@
 | Playwright E2E スイート | `e2e/` | 回帰必須・正常系の spec（TypeScript / Page Object Model）。 |
 | E2E ワークフロー | `.github/workflows/e2e-playwright.yml` | 毎日のスケジュール＋手動実行。`results.json`・HTML レポート・トレースを出力し、GitHub Pages へ公開、Slack 通知。 |
 | 自動修復ワークフロー | `.github/workflows/e2e-auto-heal.yml` | `workflow_run` で起動。`assess` ジョブで対応要否を判定、`heal` ジョブで Claude を実行。 |
-| 自動修復ポリシー | `.github/auto-heal-prompt.md` | Claude に渡す指示（3 区分のトリアゲ・安全モデル・Slack 通知の中身）。 |
+| 自動修復ポリシー | `.github/auto-heal-prompt.md` | Claude に渡す指示（3 区分のトリアージ・安全モデル・Slack 通知の中身）。 |
 | PR/Push CI | `.github/workflows/playwright.yml` | 既存の PR/Push 時の高速フィードバック用（自動修復は走らせない）。 |
 
 ---
@@ -31,7 +31,7 @@
 | Secret 名 | 用途 | 必須 |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Claude 自動修復（`anthropics/claude-code-action`）の認証。 | 自動修復を使う場合は必須 |
-| `SLACK_WEBHOOK_URL` | Slack Incoming Webhook の URL。結果通知・自動トリアゲ通知に使用。 | 任意（未設定なら通知をスキップ） |
+| `SLACK_WEBHOOK_URL` | Slack Incoming Webhook の URL。結果通知・自動トリアージ通知に使用。 | 任意（未設定なら通知をスキップ） |
 
 > `GITHUB_TOKEN` は GitHub Actions が自動提供するため登録不要。`AUTO_HEAL_PROMPT` は workflow 内で `.github/auto-heal-prompt.md` から動的に生成する環境変数で、登録は不要（エディタの静的 Lint で未定義警告が出ることがあるが想定どおり）。
 
@@ -57,7 +57,7 @@ flowchart TB
     OUT --> PAGES["GitHub Pages レポート"]
     OUT --> SLK1["Slack 結果通知"]
     OUT -->|"workflow_run: completed"| ASSESS["assess: 失敗/Flaky 判定"]
-    ASSESS -->|"対応あり"| HEAL["heal: Claude トリアゲ"]
+    ASSESS -->|"対応あり"| HEAL["heal: Claude トリアージ"]
     HEAL --> FLAKY["Flaky → 安定化 PR"]
     HEAL --> DEFECT["テスト不備 → draft PR"]
     HEAL --> REG["製品回帰/不明 → 変更なし・要人間"]

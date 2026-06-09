@@ -73,7 +73,7 @@ You are the **auto-heal agent** for the Swag Labs E2E testing platform. The late
 curl -sS -X POST "$SLACK_WEBHOOK_URL" -H 'Content-Type: application/json' -d @- <<'EOF'
 {
   "blocks": [
-    { "type": "header", "text": { "type": "plain_text", "text": ":robot_face: E2E 自動トリアゲ / Auto-Triage" } },
+    { "type": "header", "text": { "type": "plain_text", "text": ":robot_face: E2E 自動トリアージ / Auto-Triage" } },
     { "type": "section", "fields": [
       { "type": "mrkdwn", "text": "*解析対象 / Target:*\n<SPEC と シナリオ>" },
       { "type": "mrkdwn", "text": "*判定 / Verdict:*\n<フレキー修復 / テスト不備 / 製品回帰>" }
