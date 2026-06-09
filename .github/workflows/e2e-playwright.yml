@@ -5,9 +5,10 @@
 name: E2E Playwright
 
 on:
-  schedule:
-    # 毎日 02:00 JST（17:00 UTC）に Dev に対して実行
-    - cron: '0 17 * * *'
+  # 定期実行（毎日 02:00 JST）は本サンプルでは無効化し、手動実行のみとする。
+  # 本番で夜間回帰を有効にする場合は下記 schedule のコメントを外す。
+  # schedule:
+  #   - cron: '0 17 * * *'   # 毎日 02:00 JST（17:00 UTC）
   workflow_dispatch:
     inputs:
       base_url:

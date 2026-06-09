@@ -115,7 +115,7 @@ flowchart TB
 | ワークフロー | トリガー | 役割 |
 |---|---|---|
 | `playwright.yml` | PR / Push | 高速フィードバック用 CI。レポートを Artifact 保存。 |
-| `e2e-playwright.yml` | 毎日 02:00 JST / 手動 | 回帰スイートを実行し、`results.json`・HTML レポート・トレースを出力。GitHub Pages へ公開し Slack 通知。 |
+| `e2e-playwright.yml` | 手動実行（dispatch）※定期実行はサンプルで無効化 | 回帰スイートを実行し、`results.json`・HTML レポート・トレースを出力。GitHub Pages へ公開し Slack 通知。 |
 | `e2e-auto-heal.yml` | `e2e-playwright.yml` 完了時 | 失敗/Flaky を判定し、Claude が 3 区分（Flaky / テスト不備 / 製品回帰）に分類して対応。 |
 
 ### 判定区分（Triage Buckets）
