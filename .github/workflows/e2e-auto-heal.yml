@@ -1,0 +1,121 @@
+# 自動テスト基盤 — 自動修復ワークフロー（Auto-Heal workflow）
+# E2E Playwright の完了時に workflow_run で起動する。
+#   assess: results.json を見て「失敗 or Flaky があるか」を判定し、対応要否を出力。
+#   heal  : 対応がある場合のみ main をチェックアウトし、結果とトレースを取得して Claude を実行。
+# Claude は各 spec を Flaky / テスト不備 / 製品回帰 の 3 区分に分類し、対応とSlack通知を行う。
+name: E2E Auto-Heal
+
+on:
+  workflow_run:
+    workflows: ["E2E Playwright"]
+    types: [completed]
+
+# Claude が修正 PR を作成できるよう権限を付与。製品コードには触れない（プロンプトで規定）。
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  # --- 1) 対応要否の判定（assess） ---
+  assess:
+    name: Assess results
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.decide.outputs.proceed }}
+      reason: ${{ steps.decide.outputs.reason }}
+    steps:
+      - name: Download e2e-results artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-results
+          path: incoming
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide whether to heal
+        id: decide
+        run: |
+          file="incoming/results.json"
+          if [ ! -f "$file" ]; then
+            echo "results.json が見つかりません。対応なしで終了します。"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=no-results" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Playwright JSON レポートの stats から失敗/Flaky を読む
+          unexpected=$(jq -r '.stats.unexpected // 0' "$file")
+          flaky=$(jq -r '.stats.flaky // 0' "$file")
+          echo "unexpected=$unexpected / flaky=$flaky"
+          if [ "$unexpected" -gt 0 ] || [ "$flaky" -gt 0 ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=unexpected=${unexpected},flaky=${flaky}" >> "$GITHUB_OUTPUT"
+          else
+            echo "全合格・Flaky なし。自動修復は不要です。"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=all-green" >> "$GITHUB_OUTPUT"
+          fi
+
+  # --- 2) Claude による解析・修復（heal） ---
+  heal:
+    name: Heal with Claude
+    needs: assess
+    if: ${{ needs.assess.outputs.proceed == 'true' }}
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      # 修正は常に最新の main に対して行う（失敗時の古いブランチではない）
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      # 失敗実行の結果とトレースを取得（Claude が原因解析・再検証に使う）
+      - name: Download failing run results + traces
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-results
+          path: failing-run
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Load auto-heal prompt
+        run: |
+          {
+            echo 'AUTO_HEAL_PROMPT<<PROMPT_EOF'
+            cat .github/auto-heal-prompt.md
+            echo ''
+            echo '## この実行のコンテキスト（Run context）'
+            echo "- assess の判定理由 / reason: ${{ needs.assess.outputs.reason }}"
+            echo "- 失敗した E2E 実行 / source run: ${{ github.event.workflow_run.html_url }}"
+            echo '- 失敗実行の results.json とトレース: failing-run/ 配下に展開済み（results.json, test-results/）'
+            echo PROMPT_EOF
+          } >> "$GITHUB_ENV"
+
+      - name: Run Claude auto-heal
+        uses: anthropics/claude-code-action@v1
+        env:
+          # Claude が gh / curl から利用する（プロンプトで使用を指示）
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SOURCE_RUN_URL: ${{ github.event.workflow_run.html_url }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: ${{ env.AUTO_HEAL_PROMPT }}
+          claude_args: |
+            --model claude-sonnet-4-6
+            --max-turns 40
+            --allowedTools "Bash,Read,Edit,Write,Glob,Grep"

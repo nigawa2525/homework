@@ -1,22 +1,25 @@
 {
-  "name": "tier_iv_homework",
+  "name": "swag-labs-e2e",
   "version": "1.0.0",
   "main": "index.js",
+  "description": "Swag Labs (saucedemo) E2E testing platform — Playwright + GitHub Actions + Slack + Claude auto-heal",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nigawa2525/tier_iv_homework.git"
+    "url": "git+https://github.com/nigawa2525/homework.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/nigawa2525/tier_iv_homework/issues"
+    "url": "https://github.com/nigawa2525/homework/issues"
   },
-  "homepage": "https://github.com/nigawa2525/tier_iv_homework#readme",
-  "description": "",
+  "homepage": "https://github.com/nigawa2525/homework#readme",
   "devDependencies": {
     "@playwright/test": "^1.58.1",
     "ts-node": "^10.9.2",

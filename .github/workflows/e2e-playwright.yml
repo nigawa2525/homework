@@ -1,0 +1,141 @@
+# 自動テスト基盤 — E2E ワークフロー（E2E workflow）
+# 役割: Playwright 回帰スイートを定期実行し、results.json + HTML レポート + トレースを出力。
+#       レポートを GitHub Pages に公開し、結果を Slack に通知する。
+# 完了すると e2e-auto-heal.yml が workflow_run で起動し、失敗/Flaky を Claude が解析する。
+name: E2E Playwright
+
+on:
+  schedule:
+    # 毎日 02:00 JST（17:00 UTC）に Dev に対して実行
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'テスト対象 URL（未指定なら saucedemo 本番）'
+        required: false
+        default: ''
+
+# GitHub Pages へのデプロイに必要な権限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages デプロイは同時実行を 1 つに絞る
+concurrency:
+  group: 'e2e-pages'
+  cancel-in-progress: false
+
+jobs:
+  # --- 1) E2E 実行（このジョブの成否が workflow_run の conclusion になる） ---
+  e2e:
+    name: Run Playwright (Dev)
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: ${{ github.event.inputs.base_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      # 失敗しても必ずレポート・結果・トレースを残す
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload results.json + traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            results.json
+            test-results/
+          retention-days: 30
+
+  # --- 2) レポートを GitHub Pages に公開（テスト失敗時も公開する） ---
+  report:
+    name: Publish report to GitHub Pages
+    needs: e2e
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download HTML report
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: playwright-report
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # --- 3) Slack に結果通知（開始ではなく結果。基盤の通知役） ---
+  notify:
+    name: Notify Slack
+    needs: [e2e, report]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post result to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          E2E_RESULT: ${{ needs.e2e.result }}
+          REPORT_URL: ${{ needs.report.outputs.page_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL 未設定のため通知をスキップします。"
+            exit 0
+          fi
+          if [ "$E2E_RESULT" = "success" ]; then
+            emoji=":white_check_mark:"; text="E2E 成功 / Passed"
+          else
+            emoji=":x:"; text="E2E 失敗 / Failed"
+          fi
+          report_line="(レポート未公開 / report not published)"
+          if [ -n "$REPORT_URL" ]; then
+            report_line="<${REPORT_URL}|HTML レポート / Report>"
+          fi
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d @- <<EOF
+          {
+            "blocks": [
+              { "type": "header", "text": { "type": "plain_text", "text": "${emoji} E2E Playwright — ${text}" } },
+              { "type": "section", "fields": [
+                { "type": "mrkdwn", "text": "*結果 / Result:*\n${E2E_RESULT}" },
+                { "type": "mrkdwn", "text": "*リポジトリ / Repo:*\n${REPO}" }
+              ]},
+              { "type": "section", "text": { "type": "mrkdwn", "text": "${report_line}　|　<${RUN_URL}|実行ログ / Run logs>" } }
+            ]
+          }
+          EOF

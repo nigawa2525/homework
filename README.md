@@ -8,15 +8,22 @@
 
 ```text
 .
-├── .cursor/rules/          # Cursor AI 用のコーディングルール定義
-├── .github/workflows/      # CI/CD (GitHub Actions) 設定
+├── .cursor/rules/              # Cursor AI 用のコーディングルール定義
+├── .github/
+│   ├── workflows/
+│   │   ├── playwright.yml          # PR/Push 時の高速 CI
+│   │   ├── e2e-playwright.yml      # 定期 E2E 実行 + レポート公開 + Slack 通知
+│   │   └── e2e-auto-heal.yml       # Claude による自動修復（workflow_run 起動）
+│   └── auto-heal-prompt.md     # 自動修復ポリシー（Claude への指示）
+├── docs/
+│   └── auto-heal.md            # 自動テスト基盤のセットアップ・安全モデル
 ├── e2e/
-│   ├── constants/          # 共通定数 (メッセージなど)
-│   ├── helpers/            # 共通ユーティリティ (環境変数など)
-│   ├── pages/              # Page Object Model (画面操作ロジック)
-│   └── tests/              # テストシナリオ (.spec.ts)
-├── playwright.config.ts    # Playwright 設定ファイル
-└── package.json            # 依存関係管理
+│   ├── constants/              # 共通定数 (メッセージなど)
+│   ├── helpers/                # 共通ユーティリティ (環境変数など)
+│   ├── pages/                  # Page Object Model (画面操作ロジック)
+│   └── tests/                  # テストシナリオ (.spec.ts)
+├── playwright.config.ts        # Playwright 設定ファイル
+└── package.json                # 依存関係管理
 ```
 
 ## 2. 実装ルール（設計指針）
@@ -83,11 +90,47 @@ npx playwright install chromium
 npx playwright test
 ```
 
-## 6. CI Pipeline (GitHub Actions)
+## 6. 自動テスト基盤（Automated Testing Platform）
 
-GitHub Actions により、プルリクエストおよびメインブランチへのプッシュ時に自動的にテストが実行されます。
+夜間の E2E 実行を「自己保守ループ」に変える基盤を実装しています。スケジュール実行 → レポート公開 → Slack 通知 → **Claude による自動修復** までを GitHub Actions で完結させます。詳細なセットアップと安全モデルは [`docs/auto-heal.md`](docs/auto-heal.md) を参照してください。
+
+```mermaid
+flowchart TB
+    CRON["毎日 cron / 手動 dispatch"] --> RUN["E2E Playwright 実行"]
+    RUN --> OUT["results.json + HTML + traces"]
+    OUT --> PAGES["GitHub Pages レポート"]
+    OUT --> SLK1["Slack 結果通知"]
+    OUT -->|"workflow_run: completed"| ASSESS["assess: 失敗/Flaky 判定"]
+    ASSESS -->|"対応あり"| HEAL["heal: Claude トリアゲ"]
+    HEAL --> FLAKY["Flaky → 安定化 PR"]
+    HEAL --> DEFECT["テスト不備 → draft PR"]
+    HEAL --> REG["製品回帰/不明 → 変更なし・要人間"]
+    FLAKY --> SLK2["Slack 構造化通知"]
+    DEFECT --> SLK2
+    REG --> SLK2
+```
+
+### ワークフロー一覧
+
+| ワークフロー | トリガー | 役割 |
+|---|---|---|
+| `playwright.yml` | PR / Push | 高速フィードバック用 CI。レポートを Artifact 保存。 |
+| `e2e-playwright.yml` | 毎日 02:00 JST / 手動 | 回帰スイートを実行し、`results.json`・HTML レポート・トレースを出力。GitHub Pages へ公開し Slack 通知。 |
+| `e2e-auto-heal.yml` | `e2e-playwright.yml` 完了時 | 失敗/Flaky を判定し、Claude が 3 区分（Flaky / テスト不備 / 製品回帰）に分類して対応。 |
+
+### 判定区分（Triage Buckets）
+
+| 区分 | 判定根拠 | 対応 |
+|---|---|---|
+| Flaky | リトライで合格 | テスト安定化 → 再検証 → 通常 PR |
+| テスト不備 | 仕様どおりだがテストが古い | テスト修正 → draft PR（人間レビュー） |
+| 製品回帰 / 不明 | アプリ誤動作 or 原因不明 | コード変更なし → Slack で要人間 |
 
 ### 手動実行方法
-GitHub リポジトリの **Actions** タブから、`Playwright Tests` ワークフローを選択し、**Run workflow** ボタンをクリックすることで、任意のタイミングでテストを手動実行できます（`workflow_dispatch` イベントにより有効化されています）。
+GitHub リポジトリの **Actions** タブから `E2E Playwright` ワークフローを選択し、**Run workflow** をクリックすると任意のタイミングで実行できます（`base_url` を指定すると対象環境を切り替え可能）。
 
-テスト結果（レポート）は Artifacts として保存されます。
+### 必要な設定
+- **GitHub Pages**: Settings → Pages → Source を「GitHub Actions」に設定。
+- **Secrets**: `ANTHROPIC_API_KEY`（自動修復用・必須）、`SLACK_WEBHOOK_URL`（通知用・任意）。
+
+> このサンプルでは、QA 方針書（`policy/自動テスト基盤.md`）の Cloudflare Pages を、外部アカウント不要で動かせる **GitHub Pages** に置き換えています。
