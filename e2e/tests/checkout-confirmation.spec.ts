@@ -31,6 +31,6 @@ test.describe('チェックアウト完了メッセージ', () => {
     await expect(page).toHaveURL(checkoutPage.urlComplete);
     await expect(checkoutPage.headerTitle()).toHaveText('Checkout: Complete!');
     // 完了メッセージの検証
-    await expect(checkoutPage.completeHeader()).toHaveText('Thank you for your order!!');
+    await expect(checkoutPage.completeHeader()).toHaveText('Thank you for your order!');
   });
 });
