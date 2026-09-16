@@ -49,7 +49,7 @@ jobs:
             -d @- <<EOF
           {
             "blocks": [
-              { "type": "header", "text": { "type": "plain_text", "text": ":rocket: E2E Playwright — 実行開始 / Started" } },
+              { "type": "header", "text": { "type": "plain_text", "text": ":rocket: [${REPO}] E2E Playwright — 実行開始 / Started" } },
               { "type": "section", "fields": [
                 { "type": "mrkdwn", "text": "*リポジトリ / Repo:*\n${REPO}" },
                 { "type": "mrkdwn", "text": "*トリガー / Trigger:*\n${TRIGGER}" }
@@ -162,7 +162,7 @@ jobs:
             -d @- <<EOF
           {
             "blocks": [
-              { "type": "header", "text": { "type": "plain_text", "text": "${emoji} E2E Playwright — ${text}" } },
+              { "type": "header", "text": { "type": "plain_text", "text": "${emoji} [${REPO}] E2E Playwright — ${text}" } },
               { "type": "section", "fields": [
                 { "type": "mrkdwn", "text": "*結果 / Result:*\n${E2E_RESULT}" },
                 { "type": "mrkdwn", "text": "*リポジトリ / Repo:*\n${REPO}" }
