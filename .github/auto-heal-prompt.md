@@ -70,10 +70,9 @@ You are the **auto-heal agent** for the Swag Labs E2E testing platform. The late
 投稿例（雛形 / template）:
 
 ```bash
-curl -sS -X POST "$SLACK_WEBHOOK_URL" -H 'Content-Type: application/json' -d @- <<'EOF'
-{
+jq -n --arg repo "$GITHUB_REPOSITORY" '{
   "blocks": [
-    { "type": "header", "text": { "type": "plain_text", "text": ":robot_face: E2E 自動トリアージ / Auto-Triage" } },
+    { "type": "header", "text": { "type": "plain_text", "text": (":robot_face: [" + $repo + "] E2E 自動トリアージ / Auto-Triage") } },
     { "type": "section", "fields": [
       { "type": "mrkdwn", "text": "*解析対象 / Target:*\n<SPEC と シナリオ>" },
       { "type": "mrkdwn", "text": "*判定 / Verdict:*\n<フレキー修復 / テスト不備 / 製品回帰>" }
@@ -81,8 +80,9 @@ curl -sS -X POST "$SLACK_WEBHOOK_URL" -H 'Content-Type: application/json' -d @- 
     { "type": "section", "text": { "type": "mrkdwn", "text": "*理由 / Reason:* <一言>" } },
     { "type": "section", "text": { "type": "mrkdwn", "text": "*対応 / Action:* <PR リンク または 要人間>" } }
   ]
-}
-EOF
+}' | curl -sS -X POST "$SLACK_WEBHOOK_URL" -H 'Content-Type: application/json' -d @-
 ```
+
+ヘッダーは先頭の絵文字の直後に `[<owner>/<repo>]` を置き、その値は `$GITHUB_REPOSITORY` から取得する（ハードコードしない）。 / The header must start with the emoji followed by `[<owner>/<repo>]` taken from `$GITHUB_REPOSITORY`, never hardcoded.
 
 `SLACK_WEBHOOK_URL` が未設定の場合は通知をスキップし、その旨を総括に明記してください。
